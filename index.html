@@ -6,48 +6,182 @@
 <meta name="robots" content="noindex">
 <title>ppp-00 のサイト</title>
 <style>
-:root{--bg:#f4f2ee;--card:#fffdf9;--fg:#1f2421;--muted:#6b706b;--line:#e2ded6;--accent:#2f6f5e;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#151816;--card:#1d211f;--fg:#e8ebe8;--muted:#9aa39d;--line:#2c322f;--accent:#7cc4ad;color-scheme:dark}}
+:root{--bg:#f4f2ee;--card:#fffdf9;--fg:#1f2421;--muted:#6b706b;--line:#e2ded6;--accent:#2f6f5e;--on-accent:#fff;--danger:#b3412f;--chip:#e6efeb;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#151816;--card:#1d211f;--fg:#e8ebe8;--muted:#9aa39d;--line:#2c322f;--accent:#7cc4ad;--on-accent:#10201b;--danger:#ef8a76;--chip:#22312c;color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI",sans-serif}
-main{max-width:520px;margin:0 auto;padding-block:48px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-h1{font-size:1.4rem;margin:0 0 4px;text-wrap:balance}
-.sub{color:var(--muted);font-size:.85rem;margin:0 0 28px}
+main{max-width:540px;margin:0 auto;padding-block:44px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:24px}
+h1{font-size:1.4rem;margin:0;text-wrap:balance}
+.sub{color:var(--muted);font-size:.85rem;margin:2px 0 0}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:8px 14px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+button:disabled{opacity:.5;cursor:default}
 ul{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+li{position:relative}
 a.card{display:flex;align-items:center;gap:14px;padding:16px 18px;background:var(--card);border:1px solid var(--line);border-radius:14px;color:inherit;text-decoration:none;transition:border-color .15s,transform .15s}
 a.card:hover,a.card:focus-visible{border-color:var(--accent);transform:translateY(-1px);outline:none}
-.icon{flex:none;width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font-size:1.3rem;background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.icon{flex:none;width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:1.1rem;background:var(--chip);color:var(--accent)}
 .txt{min-width:0;flex:1}
 .name{font-weight:600}
 .desc{color:var(--muted);font-size:.85rem}
+.host{color:var(--muted);font-size:.75rem;overflow-wrap:anywhere}
 .arrow{color:var(--muted)}
+.del{position:absolute;top:50%;right:12px;transform:translateY(-50%);padding:4px 10px;font-size:.8rem;color:var(--danger);border-color:var(--danger)}
+body:not(.editing) .del{display:none}
+body.editing .arrow{visibility:hidden}
+.empty{color:var(--muted);text-align:center;padding:24px}
+.panel{margin-top:20px;padding:18px;background:var(--card);border:1px solid var(--line);border-radius:14px;display:grid;gap:12px}
+.panel h2{font-size:1rem;margin:0}
+form{display:grid;gap:12px}
+label{display:grid;gap:4px;font-size:.85rem;color:var(--muted)}
+input{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%}
+input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.msg{font-size:.85rem;min-height:1.2em;margin:0}
+.msg.err{color:var(--danger)}
+.note{font-size:.78rem;color:var(--muted);margin:0}
+.note a,footer a{color:var(--accent)}
+summary{cursor:pointer}
 footer{margin-top:32px;color:var(--muted);font-size:.78rem}
-footer a{color:var(--accent)}
 </style>
 </head>
 <body>
 <main>
-<h1>ppp-00 のサイト</h1>
-<p class="sub">自作サイトへのリンク集</p>
+<header>
+  <div>
+    <h1>ppp-00 のサイト</h1>
+    <p class="sub">自作サイトへのリンク集</p>
+  </div>
+  <button id="editBtn" type="button">編集</button>
+</header>
+
 <ul id="list"></ul>
-<footer>リンクの追加・変更は <a href="https://github.com/ppp-00/ppp-00.github.io/edit/main/index.html">index.html の SITES</a> を編集</footer>
+
+<section id="editor" class="panel" hidden>
+  <h2>サイトを追加</h2>
+  <form id="addForm">
+    <label>サイト名<input id="fName" required maxlength="60"></label>
+    <label>説明<input id="fDesc" maxlength="120"></label>
+    <label>URL<input id="fUrl" type="url" required placeholder="https://"></label>
+    <div class="row"><button class="primary" type="submit">追加して保存</button></div>
+  </form>
+  <p id="msg" class="msg" role="status"></p>
+
+  <details id="tokenBox">
+    <summary class="note">GitHub トークンの設定</summary>
+    <div style="display:grid;gap:8px;margin-top:10px">
+      <p class="note">保存には、このリポジトリ（ppp-00.github.io）の Contents を読み書きできる
+        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained トークン</a>
+        が必要です。トークンはこのブラウザの中だけに保存されます。</p>
+      <label>トークン<input id="fToken" type="password" autocomplete="off" placeholder="github_pat_..."></label>
+      <div class="row"><button id="clearToken" type="button">削除</button><button id="saveToken" type="button">保存</button></div>
+    </div>
+  </details>
+</section>
+
+<footer>データ：<a href="https://github.com/ppp-00/ppp-00.github.io/blob/main/sites.json">sites.json</a>（GitHub 上で直接編集しても反映されます）</footer>
 </main>
+
 <script>
-// ここにサイトを追加する： { name, desc, url, icon }
-const SITES = [
-  { name: "長崎の住まい比較", desc: "物件と通勤バス（岩瀬道町）の比較", url: "https://ppp-00.github.io/nagasaki-rent/", icon: "🏠" },
-  { name: "買い目検索", desc: "ボートレースの買い目検索", url: "https://ppp-00.github.io/boat_site/", icon: "🚤" },
-];
-const list = document.getElementById("list");
-for (const s of SITES) {
-  const li = document.createElement("li");
-  li.innerHTML = '<a class="card"><span class="icon"></span><span class="txt"><div class="name"></div><div class="desc"></div></span><span class="arrow">›</span></a>';
-  const a = li.querySelector("a"); a.href = s.url;
-  li.querySelector(".icon").textContent = s.icon || "🔗";
-  li.querySelector(".name").textContent = s.name;
-  li.querySelector(".desc").textContent = s.desc || "";
-  list.appendChild(li);
+const OWNER = "ppp-00", REPO = "ppp-00.github.io", PATH = "sites.json", BRANCH = "main";
+const API = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`;
+const $ = id => document.getElementById(id);
+let sites = [], sha = null;
+
+const store = {
+  get(k){ try { return localStorage.getItem(k) || ""; } catch { return ""; } },
+  set(k,v){ try { v ? localStorage.setItem(k,v) : localStorage.removeItem(k); } catch {} }
+};
+
+const b64decode = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g,"")), c => c.charCodeAt(0)));
+const b64encode = s => { const b = new TextEncoder().encode(s); let t = ""; b.forEach(x => t += String.fromCharCode(x)); return btoa(t); };
+
+function headers(){
+  const h = { Accept: "application/vnd.github+json" };
+  const t = store.get("gh_token"); if (t) h.Authorization = "Bearer " + t;
+  return h;
 }
+
+async function load(){
+  // GitHub API から最新を読む（Pages の再ビルド待ちが不要）。失敗したら公開中のファイルを読む。
+  try {
+    const r = await fetch(API + "?ref=" + BRANCH, { headers: headers(), cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    const j = await r.json(); sha = j.sha; sites = JSON.parse(b64decode(j.content));
+  } catch {
+    try { sites = await (await fetch(PATH + "?t=" + Date.now())).json(); } catch { sites = []; }
+  }
+  render();
+}
+
+function hostOf(u){ try { const x = new URL(u); return x.host + (x.pathname === "/" ? "" : x.pathname); } catch { return u; } }
+
+function render(){
+  const list = $("list"); list.textContent = "";
+  if (!sites.length) { const li = document.createElement("li"); li.className = "empty"; li.textContent = "まだサイトがありません"; list.append(li); return; }
+  sites.forEach((s, i) => {
+    const li = document.createElement("li");
+    const a = document.createElement("a"); a.className = "card"; a.href = s.url; a.target = "_blank"; a.rel = "noopener";
+    const ic = document.createElement("span"); ic.className = "icon"; ic.textContent = [...(s.name || "?")][0];
+    const tx = document.createElement("span"); tx.className = "txt";
+    const n = document.createElement("div"); n.className = "name"; n.textContent = s.name;
+    tx.append(n);
+    if (s.desc) { const d = document.createElement("div"); d.className = "desc"; d.textContent = s.desc; tx.append(d); }
+    const h = document.createElement("div"); h.className = "host"; h.textContent = hostOf(s.url); tx.append(h);
+    const ar = document.createElement("span"); ar.className = "arrow"; ar.textContent = "›";
+    a.append(ic, tx, ar);
+    const del = document.createElement("button"); del.type = "button"; del.className = "del"; del.textContent = "削除";
+    del.onclick = () => confirmDelete(del, i);
+    li.append(a, del); list.append(li);
+  });
+}
+
+function say(t, err){ const m = $("msg"); m.textContent = t; m.className = "msg" + (err ? " err" : ""); }
+
+async function save(next, message){
+  if (!store.get("gh_token")) { $("tokenBox").open = true; say("保存するには GitHub トークンを設定してください。", true); return false; }
+  say("保存中…");
+  try {
+    // 最新の sha を取り直してから書き込む
+    const cur = await fetch(API + "?ref=" + BRANCH, { headers: headers(), cache: "no-store" });
+    if (cur.ok) sha = (await cur.json()).sha;
+    const body = { message, branch: BRANCH, content: b64encode(JSON.stringify(next, null, 2) + "\n") };
+    if (sha) body.sha = sha;
+    const r = await fetch(API, { method: "PUT", headers: { ...headers(), "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) {
+      const why = r.status === 401 ? "トークンが無効です。" : r.status === 403 || r.status === 404 ? "トークンにこのリポジトリへの書き込み権限がありません。" : r.status === 409 ? "ほかの変更と重なりました。もう一度試してください。" : "保存に失敗しました（" + r.status + "）。";
+      say(why, true); return false;
+    }
+    sha = (await r.json()).content.sha; sites = next; render();
+    say("保存しました。"); return true;
+  } catch { say("通信に失敗しました。", true); return false; }
+}
+
+$("addForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const site = { name: $("fName").value.trim(), desc: $("fDesc").value.trim(), url: $("fUrl").value.trim() };
+  if (!site.name || !site.url) return;
+  const btn = e.submitter; btn.disabled = true;
+  if (await save([...sites, site], "Add " + site.name)) e.target.reset();
+  btn.disabled = false;
+});
+
+function confirmDelete(btn, i){
+  if (btn.dataset.armed) { save(sites.filter((_, j) => j !== i), "Remove " + sites[i].name); return; }
+  btn.dataset.armed = "1"; btn.textContent = "本当に削除";
+  setTimeout(() => { delete btn.dataset.armed; btn.textContent = "削除"; }, 3000);
+}
+
+$("editBtn").onclick = () => {
+  const on = document.body.classList.toggle("editing");
+  $("editor").hidden = !on; $("editBtn").textContent = on ? "完了" : "編集";
+  if (on && !store.get("gh_token")) $("tokenBox").open = true;
+};
+$("saveToken").onclick = () => { store.set("gh_token", $("fToken").value.trim()); $("fToken").value = ""; say("トークンを保存しました。"); $("tokenBox").open = false; };
+$("clearToken").onclick = () => { store.set("gh_token", ""); say("トークンを削除しました。"); };
+
+load();
 </script>
 </body>
 </html>
